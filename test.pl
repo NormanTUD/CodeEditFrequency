@@ -58,7 +58,19 @@ sub get_text_files {
 	my $dir = shift;
 	debug "get_text_files($dir)";
 
-	return grep { !-d && !-B } glob "$dir/*";
+	use Directory::Iterator::PP;
+	
+	my $list = Directory::Iterator::PP->new($dir);
+
+	my @files = ();
+
+	while ($list->next) {
+		push @files, $list->get;
+	}
+
+	@files = grep { !-d && !-B } @files;
+
+	return @files;
 }
 
 sub get_number_of_lines_in_file {
@@ -90,8 +102,19 @@ sub main () {
 	debug "main";
 
 	my @text_files = get_text_files($options{repo});
-
+	
 	for my $file (@text_files) {
+		my $relative_path = File::Spec->abs2rel($file, $options{repo});
+		my ($out_filename, $out_folder_base, undef) = fileparse($relative_path);
+
+		$out_folder_base = $options{outdir}.'/'.$out_folder_base;
+
+		make_path $out_folder_base;
+	
+		my $out_file_path = $out_folder_base.'/'.$out_filename.'.html';
+
+		next if -e $out_file_path;
+
 		my $number_of_lines = get_number_of_lines_in_file($file);
 
 		my @line_commit_number = ();
@@ -119,12 +142,6 @@ sub main () {
 			$html .= "<pre style='width: 99%; margin: 0; padding: 0; background-color: rgba(255, 0, 0, $opacity)'>".encode_entities($all_lines[$i])."</pre>";
 		}
 
-		my $relative_path = File::Spec->abs2rel($file, $options{repo});
-		my ($out_filename, $out_folder_base, undef) = fileparse($relative_path);
-
-		make_path $out_folder_base;
-	
-		my $out_file_path = $options{outdir}.'/'.$out_folder_base.'/'.$out_filename.'.html';
 
 		open my $fh, '>', $out_file_path;
 
