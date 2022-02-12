@@ -20,4 +20,5 @@ sudo cpan -i Data::Printer
 
 # Example
 
-See the file `visualize_git.pl.html` on how the output looks.
+See the file `visualize_git.pl.html` on how the output looks (online-version
+[here](https://htmlpreview.github.io/?https://github.com/NormanTUD/CodeEditFrequency/blob/master/visualize_git.pl.html)).
