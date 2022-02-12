@@ -152,9 +152,9 @@ sub main () {
 
 		my $divide_by = $max_number_of_edits - $min_number_of_edits;
 
-		my $html = "<style>tr, th, td { margin: 0; padding: 0}; table { border-collapse: collapse; }</style>";
+		my $html = "<style>tr, th, td { border-bottom: 0; margin: 0; padding: 0}; table { border-collapse: collapse; }</style>";
 
-		$html .= "<table border=1>\n";
+		$html .= "<table border=0>\n";
 		$html .= "<tr><th>L</th><th>&#8470;</th><th>Code</th></tr>\n";
 
 		foreach my $i (0 .. $#all_lines) {
