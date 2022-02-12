@@ -14,7 +14,8 @@ use File::Basename;
 my %options = (
 	debug => 0,
 	repo => undef,
-	outdir => undef
+	outdir => undef,
+	skip_existing => 1
 );
 
 sub debug (@) {
@@ -28,6 +29,8 @@ sub analyze_args {
 	for (@_) {
 		if(/^--debug$/) {
 			$options{debug} = 1;
+		} elsif(/^--dont_skip_existing$/) {
+			$options{skip_existing} = 0;
 		} elsif(/^--outdir=(.*)$/) {
 			my $outdir = $1;
 			$outdir = File::Spec->rel2abs($outdir);
@@ -45,6 +48,26 @@ sub analyze_args {
 			} else {
 				die "$folder does not exist";
 			}
+		} elsif (/^--help$/) {
+			print <<EOF;
+IDEA:
+
+This script visualizes git repository histories by analyzing how many times
+lines have been changed. Red lines mean they've been changed a lot, white
+ones barely or not at all after adding. The idea is to use this information
+for more targeted tests: the lines that are most often edited are probably
+the ones that contain the most bugs, so tests for these lines might be
+especially useful.
+
+PARAMETERS:
+
+--help			This help
+--debug			Enables debug option
+--dont_skip_existing	Don't skip existing out files
+--outdir=DIR		Dir where the outfiles should be written to
+--repo=DIR		Dir with a git repo to visualize
+EOF
+			
 		} else {
 			die "Unknown parameter $_";
 		}
@@ -113,7 +136,7 @@ sub main () {
 	
 		my $out_file_path = $out_folder_base.'/'.$out_filename.'.html';
 
-		next if -e $out_file_path;
+		next if $options{skip_existing} &&  -e $out_file_path;
 
 		my $number_of_lines = get_number_of_lines_in_file($file);
 
@@ -125,23 +148,29 @@ sub main () {
 
 		tie my @all_lines, 'Tie::File', $file or die $!; 
 
-		my ($min, $max) = minmax @line_commit_number;
+		my ($min_number_of_edits, $max_number_of_edits) = minmax @line_commit_number;
 
-		my $divide_by = $max - $min;
+		my $divide_by = $max_number_of_edits - $min_number_of_edits;
 
-		my $html = "";
+		my $html = "<style>tr, th, td { margin: 0; padding: 0}; table { border-collapse: collapse; }</style>";
+
+		$html .= "<table border=1>\n";
+		$html .= "<tr><th>L</th><th>&#8470;</th><th>Code</th></tr>\n";
 
 		foreach my $i (0 .. $#all_lines) {
 			my $changes = $line_commit_number[$i];
 
-			my $relative_changes = $changes - $min; # min = 0
+			my $relative_changes = $changes - $min_number_of_edits; # min = 0
 
 			my $opacity = 0;
 			eval { $opacity = (($relative_changes / $divide_by)); };
 
-			$html .= "<pre style='width: 99%; margin: 0; padding: 0; background-color: rgba(255, 0, 0, $opacity)'>".encode_entities($all_lines[$i])."</pre>";
+			my $style = "style='margin: 0; padding: 0; background-color: rgba(255, 0, 0, $opacity)'";
+
+			$html .= "<tr><td><pre $style>".($i + 1)."</pre></td><td><pre $style>$changes</pre></td><td><pre $style>".encode_entities($all_lines[$i])."</pre></td></tr>\n";
 		}
 
+		$html .= "</table>\n";
 
 		open my $fh, '>', $out_file_path;
 
