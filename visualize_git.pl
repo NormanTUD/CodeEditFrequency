@@ -155,9 +155,14 @@ sub main () {
 			next;
 		}
 
+		warn "$file: $number_of_lines\n";
+
 		my @line_commit_number = ();
 
 		for my $line (1 .. $number_of_lines) {
+			if ($line % 100 == 0) {
+				warn "$file: $line of $number_of_lines\n";
+			}
 			push @line_commit_number, get_number_of_commits($file, $line);
 		}
 
