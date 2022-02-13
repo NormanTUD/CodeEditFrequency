@@ -10,6 +10,7 @@ use List::MoreUtils qw(minmax);
 use Tie::File;
 use HTML::Entities;
 use File::Basename;
+use Directory::Iterator::PP;
 
 my %options = (
 	debug => 0,
@@ -81,8 +82,6 @@ sub get_text_files {
 	my $dir = shift;
 	debug "get_text_files($dir)";
 
-	use Directory::Iterator::PP;
-	
 	my $list = Directory::Iterator::PP->new($dir);
 
 	my @files = ();
