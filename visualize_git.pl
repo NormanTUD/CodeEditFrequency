@@ -16,7 +16,8 @@ my %options = (
 	debug => 0,
 	repo => undef,
 	outdir => undef,
-	skip_existing => 1
+	skip_existing => 1,
+	max_lines => 0
 );
 
 sub debug (@) {
@@ -32,6 +33,8 @@ sub analyze_args {
 			$options{debug} = 1;
 		} elsif(/^--dont_skip_existing$/) {
 			$options{skip_existing} = 0;
+		} elsif(/^--max_lines=(\d.*)$/) {
+			$options{max_lines} = $1;
 		} elsif(/^--outdir=(.*)$/) {
 			my $outdir = $1;
 			$outdir = File::Spec->rel2abs($outdir);
@@ -67,6 +70,8 @@ PARAMETERS:
 --dont_skip_existing	Don't skip existing out files
 --outdir=DIR		Dir where the outfiles should be written to
 --repo=DIR		Dir with a git repo to visualize
+--max_lines=INT		Maximum number of lines (longer files will be skipped,
+			0 means no limit)
 EOF
 			
 		} else {
@@ -144,6 +149,11 @@ sub main () {
 		next if $options{skip_existing} &&  -e $out_file_path;
 
 		my $number_of_lines = get_number_of_lines_in_file($file);
+
+		if($options{max_lines} != 0 && $number_of_lines > $options{max_lines}) {
+			warn "Skip $file because it is too long: $number_of_lines";
+			next;
+		}
 
 		my @line_commit_number = ();
 
