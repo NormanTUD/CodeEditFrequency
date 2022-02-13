@@ -88,7 +88,10 @@ sub get_text_files {
 	my @files = ();
 
 	while ($list->next) {
-		push @files, $list->get;
+		my $file = $list->get;
+		if($file !~ m#\.html$#) {
+			push @files, $list->get;
+		}
 	}
 
 	@files = grep { !-d && !-B } @files;
@@ -115,6 +118,7 @@ sub get_number_of_commits {
 	my $rel_path = File::Spec->abs2rel($file, $options{repo}) ;
 
 	my $command = qq#cd $options{repo}; git log -L${line},${line}:'${rel_path}' --pretty=format:"%h" --no-patch | wc -l#;
+	debug $command;
 
 	chomp(my $number_of_commits = qx($command));
 
@@ -125,6 +129,8 @@ sub main () {
 	debug "main";
 
 	my @text_files = get_text_files($options{repo});
+
+	my %overview = ();
 	
 	for my $file (@text_files) {
 		my $relative_path = File::Spec->abs2rel($file, $options{repo});
@@ -157,6 +163,8 @@ sub main () {
 		$html .= "<table border=0>\n";
 		$html .= "<tr><th>L</th><th>&#8470;</th><th>Code</th></tr>\n";
 
+		my $number_of_changes = 0;
+
 		foreach my $i (0 .. $#all_lines) {
 			my $changes = $line_commit_number[$i];
 
@@ -168,6 +176,7 @@ sub main () {
 			my $style = "style='margin: 0; padding: 0; background-color: rgba(255, 0, 0, $opacity)'";
 
 			$html .= "<tr><td><pre $style>".($i + 1)."</pre></td><td><pre $style>$changes</pre></td><td><pre $style>".encode_entities($all_lines[$i])."</pre></td></tr>\n";
+			$number_of_changes += $changes;
 		}
 
 		$html .= "</table>\n";
@@ -177,7 +186,28 @@ sub main () {
 		print $fh $html;
 
 		close $fh;
+
+		$overview{$relative_path} = {
+			link => "$out_filename.html",
+			changes => $number_of_changes
+		};
 	}
+
+	open my $fh, '>', "$options{outdir}/visualize_git_overview.html";
+	print $fh "<table>\n";
+	print $fh "<tr>\n";
+	print $fh "<th>File</th>\n";
+	print $fh "<th>&#8470;</th>\n";
+	print $fh "</tr>\n";
+
+	for my $file (sort { $overview{$b}{changes} <=> $overview{$a}{changes} } keys %overview) {
+		print $fh "<tr>\n";
+		print $fh "<td><a href='$overview{$file}{link}'>$file</a></td>\n";
+		print $fh "<td>$overview{$file}{changes}</td>\n";
+		print $fh "</tr>\n";	
+	}
+	print $fh "</table>\n";
+	close $fh;
 }
 
 analyze_args(@ARGV);
